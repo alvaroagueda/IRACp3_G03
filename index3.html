@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="es">
+
+    <head>
+        <title>P3 G03</title>
+ 
+
+
+    <style>
+    video {
+        width: 640px;
+        height: 360px;
+    }
+    </style>
+
+    </head>
+<body>
+
+    <div class="code">
+        <!--Para MPEG DASH-->
+        <script src="http://cdn.dashjs.org/latest/dash.all.min.js"></script>
+        <!--Para el Chart-->
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@2.8.0/dist/Chart.min.js"></script>
+
+        <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/dashjs/2.6.7/dash.all.min.js"></script>-->
+        
+        <!--Antiguo .mpd: "https://dash.akamaized.net/envivio/EnvivioDash3/manifest.mpd"-->
+
+        <video class="dashjs-player" autoplay controls preload="auto" muted>
+            <source src="./output/stream.mpd" type="application/dash+xml"/>
+        </video>
+    </div>
+
+    <!--Scripr de variable de (des)encriptacion-->
+        <script>
+        const protData = {
+            "org.w3.clearkey": {
+            "clearkeys": {
+            "oW5AK5BW43HzbTSKpiu3SQ": "hyN9IKGfWKdAwFaE5pm0qg"
+            }
+            }
+            };
+        </script>
+    <!--Script video player-->
+        <script>
+            /*var player;*/
+            document.addEventListener("DOMContentLoaded", function () {
+                init();
+                });
+                function init(){
+                var video,
+                player,
+                mpd_url = "./output/stream.mpd";
+                video = document.querySelector("video"); 
+                player = dashjs.MediaPlayer().create();
+                player.initialize(video, mpd_url, true);
+                player.setProtectionData(protData);  /*Vuelca variable de (des)encriptacion*/
+                player.on(dashjs.MediaPlayer.events["PLAYBACK_ENDED"], function() {
+                    clearInterval(eventPoller);
+                });
+                var eventPoller = setInterval(function() {
+                var streamInfo = player.getActiveStream().getStreamInfo();
+                var dashMetrics = player.getDashMetrics();
+                var dashAdapter = player.getDashAdapter();
+                if (dashMetrics && streamInfo) {
+                    const periodIdx = streamInfo.index;
+                    var repSwitch = dashMetrics.getCurrentRepresentationSwitch('video', true);
+                    var bufferLevel = dashMetrics.getCurrentBufferLevel('video', true);
+                    var bitrate = repSwitch ? Math.round(dashAdapter.
+                        getBandwidthForRepresentation(repSwitch.to,
+                    periodIdx) / 1000) : NaN;
+                    document.getElementById('buffer').innerText = bufferLevel + " secs";
+                    document.getElementById('bitrate').innerText = bitrate + " Kbps";
+                    document.getElementById('representation').innerText = repSwitch.to;
+                    }
+                }, 500);
+                }
+
+        </script>
+    <!-- Script Chart-->
+
+    <script>
+        // get from HTML
+        var canvas1 = document.getElementById('chart1');
+        var canvas2 = document.getElementById('chart2');
+        
+        // Configs
+        // Buffer and bitrate
+        var ctx1 = canvas1.getContext('2d'),
+            startingData1 = {
+              labels: [0],
+              datasets: [
+                  {
+                    label: 'Buffer level (secs)',
+                    yAxisID: 'A',
+                    data: [0],
+                    backgroundColor: [
+                        'rgba(20, 30, 255, 0.4)'
+                    ],
+                    borderColor: [
+                        'rgba(20, 30, 255, 1)'
+                    ],
+                    borderWidth: 2
+                  },
+                  {
+                      label: 'Bitrate (Kbps)',
+                      yAxisID: 'B',
+                    data: [0],
+                    backgroundColor: [
+                        'rgba(255, 3, 170, 0.35)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 3, 170, 1)'
+                    ],
+                    borderWidth: 1
+                  }
+              ]
+            },
+            latestLabel1 = startingData1.labels[0];
+        
+        var config1 = {
+            type: 'line',
+            data: startingData1,
+            options: {
+                scales: {
+                      yAxes: [{
+                        id: 'A',
+                        beginAtZero: true,
+                        position: 'left',
+                        title:{
+                            display: true,
+                            text: 'Buffer level (secs)',
+                        }
+                    }, {
+                        id: 'B',
+                        beginAtZero: true,
+                        position: 'right',
+                        title:{
+                            display: true,
+                            text: 'Bitrate (Kbps)',
+                        }
+                    }]
+                }
+            }
+        };
+        
+        // Resolution
+        var ctx2 = canvas2.getContext('2d'),
+            startingData2 = {
+              labels: [0],
+              datasets: [
+                  {
+                    label: 'Width',
+                    yAxisID: 'A',
+                    data: [0],
+                    backgroundColor: [
+                        'rgba(26, 200, 255, 0.2)'
+                    ],
+                    borderColor: [
+                        'rgba(26, 200, 255, 1)'
+                    ],
+                    borderWidth: 1
+                  },
+                  {
+                      label: 'Height',
+                      yAxisID: 'A',
+                    data: [0],
+                    backgroundColor: [
+                        'rgba(99, 30, 255, 0.2)'
+                    ],
+                    borderColor: [
+                        'rgba(99, 30, 255, 1)'
+                    ],
+                    borderWidth: 1
+                  }
+              ]
+            },
+            latestLabel2 = startingData2.labels[0];
+        
+        var config2 = {
+            type: 'line',
+            data: startingData2,
+            options: {
+                scales: {
+                      yAxes: [{
+                        id: 'A',
+                        position: 'right',
+                        title:{
+                            display: true,
+                            text: 'Width',
+                        }
+                    }]
+                }
+            }
+        };
+        
+        // charts
+        var chart1 = new Chart(ctx1,config1);
+        var chart2 = new Chart(ctx2,config2);
+        
+        //
+        function addData(chart, label, data) {
+            var i = 0;
+            chart.data.labels.push(label);
+            chart.data.datasets.forEach((dataset) => {
+                dataset.data.push(data[i++]);
+            });
+            chart.update();
+        }
+        
+        function removeData(chart) {
+            chart.data.labels.shift();
+            chart.data.datasets.forEach((dataset) => {
+                dataset.data.shift();
+            });
+            chart.update();
+        } //Hasta aqui chart
+        </script>
+
+    <!-- Info del video -->
+    <div class="code">
+        <p>Video Bitrate: <span id="bitrate"></span> </p>
+         <p>Video Buffer: <span id="buffer"></span> </p>
+         <p>Video Representation: <span id="representation"></span></p>
+    </div>
+</body>
+</html>
